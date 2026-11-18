@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Deck analyser · Rotation check</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="python-source.js"></script>
+  <script defer src="remembered-files.js"></script>
+  <script defer src="app.js"></script>
+  <script defer src="inventory.js"></script>
+  <script defer src="inventory-ui.js"></script>
+  <script defer src="merger-ui.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Deck analyser home"><span class="brand-mark" aria-hidden="true">▱</span> deck analyser<span class="brand-dot">.</span></a>
+      <span class="local-label"><span class="dot"></span> Runs in your browser</span>
+    </header>
+    <nav class="tabs" role="tablist" aria-label="Tools">
+      <button id="rotation-tab" role="tab" aria-selected="true" aria-controls="rotation-panel" tabindex="0">Rotation check</button>
+      <button id="inventory-tab" role="tab" aria-selected="false" aria-controls="inventory-panel" tabindex="-1">Inventory check</button>
+      <button id="merger-tab" role="tab" aria-selected="false" aria-controls="merger-panel" tabindex="-1">Deck merger</button>
+      <button id="about-tab" role="tab" aria-selected="false" aria-controls="about-panel" tabindex="-1">How it works</button>
+    </nav>
+    <p class="help">Last picked files are remembered in this browser. Re-select a file to load any changes made on disk.</p>
+
+    <main id="rotation-panel" role="tabpanel" aria-labelledby="rotation-tab">
+      <section class="intro">
+        <p class="eyebrow">PLAN YOUR NEXT STANDARD SEASON</p>
+        <h1>New season.<br><span>Know what stays.</span></h1>
+        <p class="lede">Check your deck against the January 2027 rotation.<br class="desktop-break"> See which cards stay, which rotate, and what needs a second look.</p>
+      </section>
+      <div class="workspace">
+        <section class="panel input-panel" aria-labelledby="deck-heading">
+          <div class="section-heading"><span class="step">01</span><h2 id="deck-heading">Your deck list</h2><span class="small-label">.txt · .dec · .dek</span></div>
+          <label class="dropzone" id="dropzone" for="deck-file">
+            <span class="upload-icon" aria-hidden="true">↥</span>
+            <strong id="file-label">Choose a deck list</strong>
+            <span id="file-hint">or drop a text file here</span>
+            <input id="deck-file" type="file" accept=".txt,.dec,.dek,text/plain">
+          </label>
+          <div class="textarea-heading"><label for="deck-text">Or paste your list</label><button id="sample" class="text-button" type="button">Try an example ↗</button></div>
+          <textarea id="deck-text" spellcheck="false" placeholder="Deck&#10;4 Llanowar Elves (FDN) 227&#10;4 Lightning Strike&#10;16 Forest&#10;&#10;Sideboard&#10;2 Negate" aria-describedby="formats"></textarea>
+          <p id="formats" class="help">Plain names, quantity + name, and MTG Arena exports. Main deck and sideboard included.</p>
+          <div class="options">
+            <div><label for="as-of">Printings released through</label><input id="as-of" type="date" required></div>
+            <label class="checkbox"><input id="refresh" type="checkbox"> Refresh cached cards</label>
+          </div>
+          <div class="actions"><button id="analyze" class="primary" type="button">Check rotation <span aria-hidden="true">→</span></button><button id="cancel" class="secondary" type="button" hidden>Stop</button></div>
+          <div id="progress-area" hidden><progress id="progress" max="1" value="0" aria-label="Cards checked"></progress></div>
+          <p id="status" class="status" role="status" aria-live="polite">Ready when you are. No installation or server needed.</p>
+        </section>
+        <aside class="panel rotation-note">
+          <span class="note-icon" aria-hidden="true">↻</span>
+          <p class="eyebrow">THE ROTATION PRESET</p>
+          <h2>January 2027</h2>
+          <p>The rules from your rotation checker, now with a view of the whole deck.</p>
+          <hr>
+          <div class="rule"><span class="rule-icon stay">✓</span><div><strong>Sets from 2025 onward</strong><p>Standard expansion and core sets.</p></div></div>
+          <div class="rule"><span class="rule-icon stay">✓</span><div><strong>Foundations stays</strong><p>Included regardless of its 2024 release.</p></div></div>
+          <div class="rule"><span class="rule-icon out">↗</span><div><strong>Older sets rotate</strong><p>A qualifying reprint can keep a card legal.</p></div></div>
+          <p class="note-foot">Commander sets and bonus sheets do not qualify. Current bans still apply. Future reprints and bans can change the outcome.</p>
+        </aside>
+      </div>
+
+      <section id="results" class="panel results-panel" aria-labelledby="results-heading" hidden>
+        <div class="results-heading"><div><p class="eyebrow">THE DECK BREAKDOWN</p><h2 id="results-heading">Your rotation report</h2><p id="report-meta" class="help"></p></div><button id="export" class="secondary" type="button" disabled>Export CSV ↓</button></div>
+        <div class="stats" id="stats"></div>
+        <div class="table-tools"><div class="filters" role="group" aria-label="Filter results"><button data-filter="all" aria-pressed="true">All cards</button><button data-filter="attention" aria-pressed="false">Needs attention</button><button data-filter="stays" aria-pressed="false">Stays</button></div><input id="search" type="search" placeholder="Find a card…" aria-label="Find a card"></div>
+        <div class="table-scroll"><table><thead><tr><th scope="col">Card</th><th scope="col">Deck</th><th scope="col">Qty</th><th scope="col">Latest paper edition</th><th scope="col">Released</th><th scope="col">Post rotation</th></tr></thead><tbody id="result-rows"></tbody></table></div>
+        <p id="table-empty" class="help" hidden>No cards match this filter.</p>
+        <p class="help result-foot">Counts include copies in the main deck and sideboard. “Unknown” means the lookup failed; it is not a legality verdict. Latest paper edition can be a supplemental printing.</p>
+      </section>
+    </main>
+
+    <main id="inventory-panel" role="tabpanel" aria-labelledby="inventory-tab" hidden>
+      <section class="intro">
+        <p class="eyebrow">BUILD WITH WHAT YOU OWN</p>
+        <h1>Your next deck.<br><span>Just the missing pieces.</span></h1>
+        <p class="lede">Compare a deck list with your collection and get a list of the copies you still need.<br class="desktop-break"> Everything in this tab stays on your device and works offline.</p>
+      </section>
+      <div class="inventory-inputs">
+        <section class="panel input-panel" aria-labelledby="inventory-deck-heading">
+          <div class="section-heading"><span class="step">01</span><h2 id="inventory-deck-heading">Your deck list</h2><button id="inventory-use-rotation" class="text-button inventory-use" type="button">Use rotation deck ↗</button></div>
+          <label for="inventory-deck-file" class="inventory-file-label">Choose a deck list file</label>
+          <input id="inventory-deck-file" class="inventory-file" type="file" accept=".txt,.dec,.dek,.csv,.tsv,text/plain,text/csv,text/tab-separated-values">
+          <p id="inventory-deck-file-hint" class="help">Text or CSV · UTF-8</p>
+          <div class="textarea-heading"><label for="inventory-deck-text">Or paste your deck list</label></div>
+          <textarea id="inventory-deck-text" spellcheck="false" placeholder="Deck&#10;4 Llanowar Elves (FDN) 227&#10;4 Lightning Strike&#10;&#10;Sideboard&#10;2 Negate" aria-describedby="inventory-deck-help"></textarea>
+          <p id="inventory-deck-help" class="help">Main deck and sideboard included. Accepts plain names, 4 Name, 4x Name, and Arena exports.</p>
+        </section>
+        <section class="panel input-panel" aria-labelledby="inventory-collection-heading">
+          <div class="section-heading"><span class="step">02</span><h2 id="inventory-collection-heading">Your collection</h2></div>
+          <label for="inventory-collection-file" class="inventory-file-label">Choose a collection file</label>
+          <input id="inventory-collection-file" class="inventory-file" type="file" accept=".txt,.dec,.dek,.csv,.tsv,text/plain,text/csv,text/tab-separated-values">
+          <p id="inventory-collection-file-hint" class="help">Text or CSV · UTF-8</p>
+          <div class="textarea-heading"><label for="inventory-collection-text">Or paste your collection</label></div>
+          <textarea id="inventory-collection-text" spellcheck="false" placeholder="2 Llanowar Elves (DOM) 168&#10;1 Llanowar Elves (FDN) 227 *F*&#10;2 Lightning Strike&#10;1 Negate" aria-describedby="inventory-collection-help"></textarea>
+          <p id="inventory-collection-help" class="help">ManaBox CSV and other CSVs with Name / Card Name and Quantity / Count / Qty columns. Empty collection? Leave this blank.</p>
+        </section>
+      </div>
+      <div class="inventory-controls">
+        <p class="help">Matches names regardless of case, edition, or foil. Owned copies are shared across the deck, with the main deck filled before the sideboard. CSV rows and duplicate names are added together.</p>
+        <button id="inventory-compare" class="primary" type="button">Check inventory <span aria-hidden="true">→</span></button>
+      </div>
+      <p id="inventory-status" class="status" role="status" aria-live="polite">Choose or paste your lists, then check inventory.</p>
+      <section id="inventory-results" class="panel results-panel" aria-labelledby="inventory-results-heading" hidden>
+        <div class="results-heading"><div><p class="eyebrow">WHAT YOU STILL NEED</p><h2 id="inventory-results-heading">Your missing deck list</h2></div><div class="inventory-output-actions"><button id="inventory-copy" class="secondary" type="button" disabled>Copy list</button><button id="inventory-download" class="secondary" type="button" disabled>Download .txt ↓</button></div></div>
+        <div class="stats" id="inventory-stats"></div>
+        <label class="inventory-file-label" for="inventory-output">Missing copies only</label>
+        <textarea id="inventory-output" readonly spellcheck="false" placeholder="You own every card needed for this deck." aria-describedby="inventory-output-help"></textarea>
+        <p id="inventory-output-help" class="help">Ready to copy or import. Card quantities only, with main deck and sideboard shortages combined.</p>
+        <details class="inventory-details"><summary>See the quantity breakdown</summary><div class="table-scroll"><table><thead><tr><th scope="col">Card</th><th scope="col">Deck</th><th scope="col">Needed</th><th scope="col">Owned copies used</th><th scope="col">Missing</th></tr></thead><tbody id="inventory-rows"></tbody></table></div></details>
+      </section>
+    </main>
+
+    <main id="merger-panel" role="tabpanel" aria-labelledby="merger-tab" hidden>
+      <section class="intro">
+        <p class="eyebrow">ONE CARD POOL. MORE WAYS TO PLAY.</p>
+        <h1>More decks.<br><span>Only the copies you need.</span></h1>
+        <p class="lede">Combine multiple deck lists into the card pool needed to build any one of them.<br class="desktop-break"> Each card uses the highest quantity from a single deck, including its sideboard.</p>
+      </section>
+      <section class="panel input-panel" aria-labelledby="merger-input-heading">
+        <div class="section-heading"><span class="step">01</span><h2 id="merger-input-heading">Decks to merge</h2><button id="merger-example" class="text-button inventory-use" type="button">Try an example ↗</button></div>
+        <label class="inventory-file-label" for="merger-files">Add deck list files — select multiple at once</label>
+        <input id="merger-files" class="inventory-file" type="file" multiple accept=".txt,.dec,.dek,.csv,.tsv,text/plain,text/csv,text/tab-separated-values">
+        <p id="merger-file-hint" class="help">Text, Arena, or CSV · Add more files anytime · Last lists remembered in this browser</p>
+      </section>
+      <div id="merger-inputs" class="inventory-inputs merger-inputs"></div>
+      <div class="inventory-controls"><button id="merger-add" class="secondary" type="button">+ Add pasted deck</button><p class="help">For each deck, main deck and sideboard copies are added together first. Then the highest total for each card is kept. For example: 2 Negates in one deck and 4 in another → 4 Negates.</p><button id="merger-merge" class="primary" type="button">Merge decks <span aria-hidden="true">→</span></button></div>
+      <p id="merger-status" class="status" role="status" aria-live="polite">Choose multiple files or paste at least two decks below.</p>
+      <section id="merger-results" class="panel results-panel" aria-labelledby="merger-results-heading" hidden>
+        <div class="results-heading"><div><p class="eyebrow">READY FOR EITHER BUILD</p><h2 id="merger-results-heading">Your merged deck list</h2></div><div class="inventory-output-actions"><button id="merger-copy" class="secondary" type="button" disabled>Copy list</button><button id="merger-download" class="secondary" type="button" disabled>Download .txt ↓</button><button id="merger-inventory" class="secondary" type="button" disabled>Check against collection →</button></div></div>
+        <div id="merger-stats" class="stats"></div>
+        <label class="inventory-file-label" for="merger-output">Maximum copies needed per card</label>
+        <textarea id="merger-output" readonly spellcheck="false" aria-describedby="merger-output-help"></textarea>
+        <p id="merger-output-help" class="help">Card quantities only, without Deck or Sideboard headings. This pool lets you build one of these decks at a time. It includes cards from every list and can exceed a legal deck size.</p>
+        <details class="inventory-details"><summary>Compare quantities across decks</summary><div class="table-scroll"><table><thead id="merger-table-head"></thead><tbody id="merger-rows"></tbody></table></div></details>
+      </section>
+    </main>
+
+    <main id="about-panel" role="tabpanel" aria-labelledby="about-tab" hidden>
+      <section class="intro"><p class="eyebrow">A SMALL TOOL FOR YOUR NEXT BUILD</p><h1>Your deck.<br><span>Local analysis.</span></h1></section>
+      <article class="panel about-content inventory-about"><h2>Deck merger</h2><p>Add multiple files or paste each deck into its own input. The tool totals each card within each deck, including the sideboard, and keeps the highest total across all decks. For example, a deck with 3 main-deck Negates and 1 sideboard Negate needs 4 copies; if another deck needs 2 copies, the merged list keeps 4.</p><p>The result is the card pool for building any one of the decks at a time. Output contains just quantities and names. Matching uses the same rules as Inventory check, ignoring printings and foil markers. Copy or download the result, or send it straight to Inventory check to find the cards you still need. This tab works offline and remembers your lists in this browser.</p></article>
+      <article class="panel about-content inventory-about"><h2>Inventory check</h2><p>Choose or paste a deck and your collection. Text lists and CSVs with card names and quantities are supported, including ManaBox exports. An empty collection means you own no copies. Download or copy the missing list, as card quantities without section headings. Missing copies across both sections are combined.</p><p>Copies from all editions, foils, and duplicate collection rows are added together. Names match regardless of capitalization, extra spaces, or curly apostrophes; double-faced cards match by their front-face name. Use the same language and spelling in both lists. There are no online card lookups or spelling corrections in this tab.</p><p>Each owned copy is used once, filling the main deck before the sideboard. The comparison only uses the quantities in your collection export; it does not track copies reserved for other decks. Inventory check works completely offline. The last picked files are saved in this browser for your next visit; your collection is never uploaded. Re-select a file to load changes made on disk.</p></article>
+      <article class="panel about-content"><h2>Open. Pick a list. Check.</h2><p>Open <code>index.html</code> directly in a modern browser. Select a UTF-8 text deck list or paste one, choose the last release date to include, and click <strong>Check rotation</strong>.</p><h3>The actual Python checker</h3><p>This folder has its own <a href="deck_rotation.py" download>deck_rotation.py</a>. Pyodide runs that Python code inside your browser. The page uses a generated copy in <code>python-source.js</code> so it can open from disk without a server. It never reads the original script outside this folder.</p><h3>Internet, privacy, and caching</h3><p>Internet access is required to load the Python runtime from jsDelivr and retrieve card data from <a href="https://scryfall.com/docs/api" target="_blank" rel="noreferrer">Scryfall</a>. Your file is read locally. Individual card names and the chosen release cutoff are sent to Scryfall. Successful lookups are cached in this browser for up to 24 hours when browser storage is available. Use “Refresh cached cards” to bypass that cache.</p><h3>A specific rotation preset</h3><p>This preserves the January 2027 rules in the supplied script: Standard expansions and core sets released from 2025 onward, plus Foundations. It is not an automatic rotation calendar. The release cutoff excludes later printings; legality and bans come from Scryfall’s <em>current</em> data, so this is not a historical legality checker.</p><h3>Editing the checker</h3><p>After editing the local Python file, run <code>python3 build.py</code> in this folder and reload the page. You can also use the checker directly: <code>python3 deck_rotation.py deck.txt</code>.</p><p class="help">Runtime: <a href="https://pyodide.org/en/stable/usage/quickstart.html" target="_blank" rel="noreferrer">Pyodide</a> · Card data: Scryfall · Not affiliated with Wizards of the Coast.</p></article>
+    </main>
+    <footer><span>A little clarity before your next build.</span><span>DECK ANALYSER <span aria-hidden="true">/</span> LOCAL TOOLS</span></footer>
+  </div>
+</body>
+</html>
