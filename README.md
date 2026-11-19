@@ -61,6 +61,15 @@ rules. The tool works completely offline and remembers its inputs across visits.
 Add files anytime; re-selecting a filename replaces its saved copy. Inputs can
 also be edited or removed. Limits: 100 decks and 20 MB per list.
 
+## Deck diff
+
+Paste a left and right deck list to produce two lists: cards found only on the
+left, and cards found only on the right. Main-deck and sideboard quantities are
+combined in each result. A card in both decks is treated as shared even if its
+quantity differs. Only numbered card rows are read; blank lines, headings, and
+notes are ignored. This uses the same offline card-name cleanup and matching
+rules as Inventory check, including ignoring set codes and foil markers.
+
 ## Independent local Python implementation
 
 `deck_rotation.py` is a local copy of the original checker, refactored to share
@@ -107,6 +116,7 @@ python3 tests/browser_check.py
 python3 tests/inventory_browser_check.py
 python3 tests/remembered_files_browser_check.py
 python3 tests/merger_browser_check.py
+python3 tests/diff_browser_check.py
 ```
 
 It opens `index.html` via `file://`, loads the real Python runtime, and uses

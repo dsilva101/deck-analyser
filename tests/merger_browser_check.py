@@ -97,6 +97,8 @@ with sync_playwright() as p, TemporaryDirectory(prefix="deck-merger-browser-") a
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     page.screenshot(path=str(artifacts / "merger-mobile.png"), full_page=True)
     page.get_by_role("tab", name="Deck merger", exact=True).press("ArrowRight")
+    expect(page.locator("#diff-panel")).to_be_visible()
+    page.get_by_role("tab", name="Deck diff", exact=True).press("ArrowRight")
     expect(page.locator("#about-panel")).to_be_visible()
     page.get_by_role("tab", name="Deck merger", exact=True).click()
     page.locator("#merger-files").set_input_files([

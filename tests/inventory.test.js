@@ -1,7 +1,7 @@
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { parseList, compare, cardKey } = require("../inventory.js");
+const { parseList, parseDiffList, compare, cardKey, diff } = require("../inventory.js");
 const check = (deck, collection) => compare(parseList(deck, "Deck"), parseList(collection, "Collection"));
 
 test("consumes shared owned quantities once across duplicate lines, printings, and sideboard", () => {
@@ -64,4 +64,22 @@ test("missing output combines sections and round-trips without headings or dupli
   const result = check("4 Negate\n3 Thalia, Guardian of Thraben\nSideboard\n2 Negate", "1 Negate");
   assert.equal(result.text, "5 Negate\n3 Thalia, Guardian of Thraben");
   assert.equal(compare(parseList(result.text), []).text, result.text);
+});
+
+test("deck diff returns only card names absent from the other list", () => {
+  const result = diff(
+    parseList("Deck\n2 Negate (FDN) 710\nSideboard\n1 Negate\n4 Llanowar Elves"),
+    parseList("3 negate\n4 Lightning Strike")
+  );
+  assert.equal(result.leftText, "4 Llanowar Elves");
+  assert.equal(result.rightText, "4 Lightning Strike");
+  assert.deepEqual(result.leftOnly, [{ name: "Llanowar Elves", quantity: 4 }]);
+});
+
+test("deck diff parsing ignores unnumbered rows and cleans printing details", () => {
+  const cards = parseDiffList("\nDeck\nNotes: copied from Arena\n4 Negate (FDN) 710 *F*\nSideboard\n2x Lightning Strike (DMU) 137\n3 cards total\n");
+  assert.deepEqual(cards, [
+    { name: "Negate", quantity: 4, section: "Main" },
+    { name: "Lightning Strike", quantity: 2, section: "Main" },
+  ]);
 });

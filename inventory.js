@@ -118,6 +118,16 @@
     return cards;
   }
 
+  function parseDiffList(raw, label = "List") {
+    // Deck diff intentionally accepts only numbered card rows. This leaves deck
+    // headings, section headings, notes, and other export metadata out of the
+    // comparison while reusing parseList's card-name cleanup.
+    const numberedRows = raw.split(/\r?\n/).filter((line) =>
+      /^\s*\d+(?:\s*x?\s+\S|x\s*\S)/i.test(line)
+    ).join("\n");
+    return parseList(numberedRows, label);
+  }
+
   function addCount(map, key, count) {
     const total = (map.get(key) || 0) + count;
     if (!Number.isSafeInteger(total)) throw new Error("The combined quantities are too large.");
@@ -185,7 +195,34 @@
     return { rows, total, separateTotal, text };
   }
 
-  const api = Object.freeze({ parseList, compare, cardKey, merge });
+  function diff(left, right) {
+    function uniqueCards(cards) {
+      const grouped = new Map();
+      for (const card of cards) {
+        const key = cardKey(card.name);
+        const existing = grouped.get(key);
+        if (existing) {
+          const total = existing.quantity + card.quantity;
+          if (!Number.isSafeInteger(total)) throw new Error("The combined quantities are too large.");
+          existing.quantity = total;
+        }
+        else grouped.set(key, { name: card.name, quantity: card.quantity });
+      }
+      return grouped;
+    }
+    const leftCards = uniqueCards(left);
+    const rightCards = uniqueCards(right);
+    const leftOnly = [...leftCards].filter(([key]) => !rightCards.has(key)).map(([, card]) => card);
+    const rightOnly = [...rightCards].filter(([key]) => !leftCards.has(key)).map(([, card]) => card);
+    return {
+      leftOnly,
+      rightOnly,
+      leftText: leftOnly.map((card) => `${card.quantity} ${card.name}`).join("\n"),
+      rightText: rightOnly.map((card) => `${card.quantity} ${card.name}`).join("\n"),
+    };
+  }
+
+  const api = Object.freeze({ parseList, parseDiffList, compare, cardKey, merge, diff });
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.DeckInventory = api;
 })(globalThis);

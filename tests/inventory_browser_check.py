@@ -91,6 +91,8 @@ with sync_playwright() as p:
     page.get_by_role("tab", name="Inventory check", exact=True).press("ArrowRight")
     expect(page.locator("#merger-panel")).to_be_visible()
     page.get_by_role("tab", name="Deck merger", exact=True).press("ArrowRight")
+    expect(page.locator("#diff-panel")).to_be_visible()
+    page.get_by_role("tab", name="Deck diff", exact=True).press("ArrowRight")
     expect(page.locator("#about-panel")).to_be_visible()
     assert not errors, errors
     assert not network, network

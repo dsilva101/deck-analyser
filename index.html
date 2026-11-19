@@ -12,6 +12,7 @@
   <script defer src="inventory.js"></script>
   <script defer src="inventory-ui.js"></script>
   <script defer src="merger-ui.js"></script>
+  <script defer src="diff-ui.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -23,6 +24,7 @@
       <button id="rotation-tab" role="tab" aria-selected="true" aria-controls="rotation-panel" tabindex="0">Rotation check</button>
       <button id="inventory-tab" role="tab" aria-selected="false" aria-controls="inventory-panel" tabindex="-1">Inventory check</button>
       <button id="merger-tab" role="tab" aria-selected="false" aria-controls="merger-panel" tabindex="-1">Deck merger</button>
+      <button id="diff-tab" role="tab" aria-selected="false" aria-controls="diff-panel" tabindex="-1">Deck diff</button>
       <button id="about-tab" role="tab" aria-selected="false" aria-controls="about-panel" tabindex="-1">How it works</button>
     </nav>
     <p class="help">Last picked files are remembered in this browser. Re-select a file to load any changes made on disk.</p>
@@ -142,9 +144,39 @@
       </section>
     </main>
 
+    <main id="diff-panel" role="tabpanel" aria-labelledby="diff-tab" hidden>
+      <section class="intro">
+        <p class="eyebrow">COMPARE TWO BUILDS</p>
+        <h1>Spot the changes.<br><span>Keep the signal.</span></h1>
+        <p class="lede">Paste two deck lists to see the cards that appear in only one of them.<br class="desktop-break"> Comparison happens entirely in your browser.</p>
+      </section>
+      <div class="inventory-inputs">
+        <section class="panel input-panel" aria-labelledby="diff-left-heading">
+          <div class="section-heading"><span class="step">01</span><h2 id="diff-left-heading">Left deck</h2></div>
+          <label class="inventory-file-label" for="diff-left-text">Paste a deck list</label>
+          <textarea id="diff-left-text" spellcheck="false" placeholder="Deck&#10;4 Llanowar Elves&#10;4 Lightning Strike&#10;20 Forest&#10;&#10;Sideboard&#10;2 Negate"></textarea>
+        </section>
+        <section class="panel input-panel" aria-labelledby="diff-right-heading">
+          <div class="section-heading"><span class="step">02</span><h2 id="diff-right-heading">Right deck</h2></div>
+          <label class="inventory-file-label" for="diff-right-text">Paste a deck list</label>
+          <textarea id="diff-right-text" spellcheck="false" placeholder="Deck&#10;4 Llanowar Elves&#10;4 Burst Lightning&#10;20 Mountain&#10;&#10;Sideboard&#10;2 Disdainful Stroke"></textarea>
+        </section>
+      </div>
+      <div class="inventory-controls"><p class="help">Only numbered card lines are compared; headings and notes are ignored. Set codes, collector numbers, and foil markers are ignored too. Quantities are combined across main deck and sideboard.</p><button id="diff-compare" class="primary" type="button">Compare decks <span aria-hidden="true">→</span></button></div>
+      <p id="diff-status" class="status" role="status" aria-live="polite">Paste two deck lists, then compare them.</p>
+      <section id="diff-results" class="panel results-panel" aria-labelledby="diff-results-heading" hidden>
+        <div class="results-heading"><div><p class="eyebrow">THE DIFFERENCE</p><h2 id="diff-results-heading">Cards unique to each deck</h2></div></div>
+        <div class="diff-outputs">
+          <div><label class="inventory-file-label" for="diff-left-output">Only on the left <span id="diff-left-count"></span></label><textarea id="diff-left-output" readonly spellcheck="false" placeholder="No cards are unique to the left deck."></textarea></div>
+          <div><label class="inventory-file-label" for="diff-right-output">Only on the right <span id="diff-right-count"></span></label><textarea id="diff-right-output" readonly spellcheck="false" placeholder="No cards are unique to the right deck."></textarea></div>
+        </div>
+      </section>
+    </main>
+
     <main id="about-panel" role="tabpanel" aria-labelledby="about-tab" hidden>
       <section class="intro"><p class="eyebrow">A SMALL TOOL FOR YOUR NEXT BUILD</p><h1>Your deck.<br><span>Local analysis.</span></h1></section>
       <article class="panel about-content inventory-about"><h2>Deck merger</h2><p>Add multiple files or paste each deck into its own input. The tool totals each card within each deck, including the sideboard, and keeps the highest total across all decks. For example, a deck with 3 main-deck Negates and 1 sideboard Negate needs 4 copies; if another deck needs 2 copies, the merged list keeps 4.</p><p>The result is the card pool for building any one of the decks at a time. Output contains just quantities and names. Matching uses the same rules as Inventory check, ignoring printings and foil markers. Copy or download the result, or send it straight to Inventory check to find the cards you still need. This tab works offline and remembers your lists in this browser.</p></article>
+      <article class="panel about-content inventory-about"><h2>Deck diff</h2><p>Paste a left and right deck list to see two outputs: cards that appear only in the left list and cards that appear only in the right. Deck Diff only reads numbered card lines, ignoring blank lines, headings, and notes. Copies from the main deck and sideboard are combined in each output. A card that appears in both lists is shared, even when the quantities differ.</p><p>Matching uses the same offline rules as Inventory check: names ignore capitalization, extra spaces, editions, collector numbers, foil markers, and curly apostrophes. Double-faced cards match by their front-face name.</p></article>
       <article class="panel about-content inventory-about"><h2>Inventory check</h2><p>Choose or paste a deck and your collection. Text lists and CSVs with card names and quantities are supported, including ManaBox exports. An empty collection means you own no copies. Download or copy the missing list, as card quantities without section headings. Missing copies across both sections are combined.</p><p>Copies from all editions, foils, and duplicate collection rows are added together. Names match regardless of capitalization, extra spaces, or curly apostrophes; double-faced cards match by their front-face name. Use the same language and spelling in both lists. There are no online card lookups or spelling corrections in this tab.</p><p>Each owned copy is used once, filling the main deck before the sideboard. The comparison only uses the quantities in your collection export; it does not track copies reserved for other decks. Inventory check works completely offline. The last picked files are saved in this browser for your next visit; your collection is never uploaded. Re-select a file to load changes made on disk.</p></article>
       <article class="panel about-content"><h2>Open. Pick a list. Check.</h2><p>Open <code>index.html</code> directly in a modern browser. Select a UTF-8 text deck list or paste one, choose the last release date to include, and click <strong>Check rotation</strong>.</p><h3>The actual Python checker</h3><p>This folder has its own <a href="deck_rotation.py" download>deck_rotation.py</a>. Pyodide runs that Python code inside your browser. The page uses a generated copy in <code>python-source.js</code> so it can open from disk without a server. It never reads the original script outside this folder.</p><h3>Internet, privacy, and caching</h3><p>Internet access is required to load the Python runtime from jsDelivr and retrieve card data from <a href="https://scryfall.com/docs/api" target="_blank" rel="noreferrer">Scryfall</a>. Your file is read locally. Individual card names and the chosen release cutoff are sent to Scryfall. Successful lookups are cached in this browser for up to 24 hours when browser storage is available. Use “Refresh cached cards” to bypass that cache.</p><h3>A specific rotation preset</h3><p>This preserves the January 2027 rules in the supplied script: Standard expansions and core sets released from 2025 onward, plus Foundations. It is not an automatic rotation calendar. The release cutoff excludes later printings; legality and bans come from Scryfall’s <em>current</em> data, so this is not a historical legality checker.</p><h3>Editing the checker</h3><p>After editing the local Python file, run <code>python3 build.py</code> in this folder and reload the page. You can also use the checker directly: <code>python3 deck_rotation.py deck.txt</code>.</p><p class="help">Runtime: <a href="https://pyodide.org/en/stable/usage/quickstart.html" target="_blank" rel="noreferrer">Pyodide</a> · Card data: Scryfall · Not affiliated with Wizards of the Coast.</p></article>
     </main>
