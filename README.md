@@ -63,12 +63,13 @@ also be edited or removed. Limits: 100 decks and 20 MB per list.
 
 ## Deck diff
 
-Paste a left and right deck list to produce two lists: cards found only on the
-left, and cards found only on the right. Main-deck and sideboard quantities are
-combined in each result. A card in both decks is treated as shared even if its
-quantity differs. Only numbered card rows are read; blank lines, headings, and
-notes are ignored. This uses the same offline card-name cleanup and matching
-rules as Inventory check, including ignoring set codes and foil markers.
+Paste a left and right deck list to produce two lists: copies remaining only on
+the left, and copies remaining only on the right. Main-deck and sideboard
+quantities are combined before comparison, so 2 copies on the left versus 4 on
+the right produces `2 Card Name` on the right. Only numbered card rows are
+read; blank lines, headings, and notes are ignored. This uses the same offline
+card-name cleanup and matching rules as Inventory check, including ignoring set
+codes and foil markers.
 
 ## Independent local Python implementation
 

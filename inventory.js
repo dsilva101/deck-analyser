@@ -212,8 +212,14 @@
     }
     const leftCards = uniqueCards(left);
     const rightCards = uniqueCards(right);
-    const leftOnly = [...leftCards].filter(([key]) => !rightCards.has(key)).map(([, card]) => card);
-    const rightOnly = [...rightCards].filter(([key]) => !leftCards.has(key)).map(([, card]) => card);
+    function remainingCards(cards, otherCards) {
+      return [...cards].flatMap(([key, card]) => {
+        const remaining = card.quantity - (otherCards.get(key)?.quantity || 0);
+        return remaining > 0 ? [{ name: card.name, quantity: remaining }] : [];
+      });
+    }
+    const leftOnly = remainingCards(leftCards, rightCards);
+    const rightOnly = remainingCards(rightCards, leftCards);
     return {
       leftOnly,
       rightOnly,

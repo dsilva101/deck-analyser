@@ -66,14 +66,18 @@ test("missing output combines sections and round-trips without headings or dupli
   assert.equal(compare(parseList(result.text), []).text, result.text);
 });
 
-test("deck diff returns only card names absent from the other list", () => {
+test("deck diff returns the remaining card quantities on each side", () => {
   const result = diff(
-    parseList("Deck\n2 Negate (FDN) 710\nSideboard\n1 Negate\n4 Llanowar Elves"),
-    parseList("3 negate\n4 Lightning Strike")
+    parseList("Deck\n2 Urza's Tower\n2 Negate (FDN) 710\nSideboard\n1 Negate\n4 Llanowar Elves"),
+    parseList("4 Urza's Tower\n3 negate\n4 Lightning Strike")
   );
   assert.equal(result.leftText, "4 Llanowar Elves");
-  assert.equal(result.rightText, "4 Lightning Strike");
+  assert.equal(result.rightText, "2 Urza's Tower\n4 Lightning Strike");
   assert.deepEqual(result.leftOnly, [{ name: "Llanowar Elves", quantity: 4 }]);
+  assert.deepEqual(result.rightOnly, [
+    { name: "Urza's Tower", quantity: 2 },
+    { name: "Lightning Strike", quantity: 4 },
+  ]);
 });
 
 test("deck diff parsing ignores unnumbered rows and cleans printing details", () => {

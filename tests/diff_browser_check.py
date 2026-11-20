@@ -25,6 +25,13 @@ with sync_playwright() as p:
     expect(page.locator("#diff-left-count")).to_have_text("1")
     expect(page.locator("#diff-right-count")).to_have_text("1")
 
+    page.locator("#diff-left-text").fill("2 Urza's Tower")
+    page.locator("#diff-right-text").fill("4 Urza's Tower")
+    page.locator("#diff-compare").click()
+    expect(page.locator("#diff-left-output")).to_have_value("")
+    expect(page.locator("#diff-right-output")).to_have_value("2 Urza's Tower")
+
+    page.locator("#diff-left-text").fill("2 Negate\n4 Llanowar Elves")
     page.locator("#diff-right-text").fill("2 Negate\n4 Llanowar Elves")
     expect(page.locator("#diff-results")).to_be_hidden()
     page.locator("#diff-compare").click()
@@ -33,4 +40,4 @@ with sync_playwright() as p:
     assert not errors, errors
     browser.close()
 
-print("Deck diff browser: passed (offline, normalization, inputs, empty results)")
+print("Deck diff browser: passed (offline, normalization, quantities, inputs, empty results)")
