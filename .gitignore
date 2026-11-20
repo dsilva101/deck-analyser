@@ -1,3 +1,6 @@
 __pycache__/
 *.cache.json
 test-artifacts/
+local-features/AtomicCards.json
+local-features/card-db-server.log
+local-features/card-db-server.pid

@@ -99,7 +99,7 @@ with sync_playwright() as p, TemporaryDirectory(prefix="deck-merger-browser-") a
     page.get_by_role("tab", name="Deck merger", exact=True).press("ArrowRight")
     expect(page.locator("#diff-panel")).to_be_visible()
     page.get_by_role("tab", name="Deck diff", exact=True).press("ArrowRight")
-    expect(page.locator("#about-panel")).to_be_visible()
+    expect(page.locator("#cardmarket-panel")).to_be_visible()
     page.get_by_role("tab", name="Deck merger", exact=True).click()
     page.locator("#merger-files").set_input_files([
         {"name": "same-name.txt", "mimeType": "text/plain", "buffer": b"4 Island"},

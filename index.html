@@ -13,6 +13,8 @@
   <script defer src="inventory-ui.js"></script>
   <script defer src="merger-ui.js"></script>
   <script defer src="diff-ui.js?v=deck-diff-2"></script>
+  <script defer src="cardmarket-ui.js"></script>
+  <script defer src="wants-list-ui.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -25,7 +27,8 @@
       <button id="inventory-tab" role="tab" aria-selected="false" aria-controls="inventory-panel" tabindex="-1">Inventory check</button>
       <button id="merger-tab" role="tab" aria-selected="false" aria-controls="merger-panel" tabindex="-1">Deck merger</button>
       <button id="diff-tab" role="tab" aria-selected="false" aria-controls="diff-panel" tabindex="-1">Deck diff</button>
-      <button id="about-tab" role="tab" aria-selected="false" aria-controls="about-panel" tabindex="-1">How it works</button>
+      <button id="cardmarket-tab" role="tab" aria-selected="false" aria-controls="cardmarket-panel" tabindex="-1">agg cardmarket orders</button>
+      <button id="wants-list-tab" role="tab" aria-selected="false" aria-controls="wants-list-panel" tabindex="-1">agg wants lists</button>
     </nav>
     <p class="help">Last picked files are remembered in this browser. Re-select a file to load any changes made on disk.</p>
 
@@ -173,12 +176,56 @@
       </section>
     </main>
 
-    <main id="about-panel" role="tabpanel" aria-labelledby="about-tab" hidden>
-      <section class="intro"><p class="eyebrow">A SMALL TOOL FOR YOUR NEXT BUILD</p><h1>Your deck.<br><span>Local analysis.</span></h1></section>
-      <article class="panel about-content inventory-about"><h2>Deck merger</h2><p>Add multiple files or paste each deck into its own input. The tool totals each card within each deck, including the sideboard, and keeps the highest total across all decks. For example, a deck with 3 main-deck Negates and 1 sideboard Negate needs 4 copies; if another deck needs 2 copies, the merged list keeps 4.</p><p>The result is the card pool for building any one of the decks at a time. Output contains just quantities and names. Matching uses the same rules as Inventory check, ignoring printings and foil markers. Copy or download the result, or send it straight to Inventory check to find the cards you still need. This tab works offline and remembers your lists in this browser.</p></article>
-      <article class="panel about-content inventory-about"><h2>Deck diff</h2><p>Paste a left and right deck list to see two outputs: cards that appear only in the left list and cards that appear only in the right. Deck Diff only reads numbered card lines, ignoring blank lines, headings, and notes. Copies from the main deck and sideboard are combined in each output. A card that appears in both lists is shared, even when the quantities differ.</p><p>Matching uses the same offline rules as Inventory check: names ignore capitalization, extra spaces, editions, collector numbers, foil markers, and curly apostrophes. Double-faced cards match by their front-face name.</p></article>
-      <article class="panel about-content inventory-about"><h2>Inventory check</h2><p>Choose or paste a deck and your collection. Text lists and CSVs with card names and quantities are supported, including ManaBox exports. An empty collection means you own no copies. Download or copy the missing list, as card quantities without section headings. Missing copies across both sections are combined.</p><p>Copies from all editions, foils, and duplicate collection rows are added together. Names match regardless of capitalization, extra spaces, or curly apostrophes; double-faced cards match by their front-face name. Use the same language and spelling in both lists. There are no online card lookups or spelling corrections in this tab.</p><p>Each owned copy is used once, filling the main deck before the sideboard. The comparison only uses the quantities in your collection export; it does not track copies reserved for other decks. Inventory check works completely offline. The last picked files are saved in this browser for your next visit; your collection is never uploaded. Re-select a file to load changes made on disk.</p></article>
-      <article class="panel about-content"><h2>Open. Pick a list. Check.</h2><p>Open <code>index.html</code> directly in a modern browser. Select a UTF-8 text deck list or paste one, choose the last release date to include, and click <strong>Check rotation</strong>.</p><h3>The actual Python checker</h3><p>This folder has its own <a href="deck_rotation.py" download>deck_rotation.py</a>. Pyodide runs that Python code inside your browser. The page uses a generated copy in <code>python-source.js</code> so it can open from disk without a server. It never reads the original script outside this folder.</p><h3>Internet, privacy, and caching</h3><p>Internet access is required to load the Python runtime from jsDelivr and retrieve card data from <a href="https://scryfall.com/docs/api" target="_blank" rel="noreferrer">Scryfall</a>. Your file is read locally. Individual card names and the chosen release cutoff are sent to Scryfall. Successful lookups are cached in this browser for up to 24 hours when browser storage is available. Use “Refresh cached cards” to bypass that cache.</p><h3>A specific rotation preset</h3><p>This preserves the January 2027 rules in the supplied script: Standard expansions and core sets released from 2025 onward, plus Foundations. It is not an automatic rotation calendar. The release cutoff excludes later printings; legality and bans come from Scryfall’s <em>current</em> data, so this is not a historical legality checker.</p><h3>Editing the checker</h3><p>After editing the local Python file, run <code>python3 build.py</code> in this folder and reload the page. You can also use the checker directly: <code>python3 deck_rotation.py deck.txt</code>.</p><p class="help">Runtime: <a href="https://pyodide.org/en/stable/usage/quickstart.html" target="_blank" rel="noreferrer">Pyodide</a> · Card data: Scryfall · Not affiliated with Wizards of the Coast.</p></article>
+    <main id="cardmarket-panel" role="tabpanel" aria-labelledby="cardmarket-tab" hidden>
+      <section class="intro">
+        <p class="eyebrow">FROM ORDER PAGES TO A CLEAN LIST</p>
+        <h1>Many orders.<br><span>One deck list.</span></h1>
+        <p class="lede">Choose a text file containing one or more copied Cardmarket orders.<br class="desktop-break"> The card rows are consolidated in your browser.</p>
+      </section>
+      <section class="panel input-panel" aria-labelledby="cardmarket-input-heading">
+        <div class="section-heading"><span class="step">01</span><h2 id="cardmarket-input-heading">Copied Cardmarket orders</h2></div>
+        <label for="cardmarket-file" class="inventory-file-label">Choose the orders text file</label>
+        <input id="cardmarket-file" class="inventory-file" type="file" accept=".txt,text/plain">
+        <p id="cardmarket-file-hint" class="help">A UTF-8 text file · Multiple stacked orders are supported · Your file stays on this device</p>
+        <div class="textarea-heading"><label for="cardmarket-text">Or paste copied orders</label></div>
+        <textarea id="cardmarket-text" spellcheck="false" placeholder="Paste the complete Cardmarket order page(s) here. The tool reads only rows below “Magic the Gathering Singles”." aria-describedby="cardmarket-input-help"></textarea>
+        <p id="cardmarket-input-help" class="help">Navigation, prices, delivery details, and other copied page text are ignored.</p>
+        <div class="actions"><button id="cardmarket-consolidate" class="primary" type="button">Consolidate cards <span aria-hidden="true">→</span></button></div>
+        <p id="cardmarket-status" class="status" role="status" aria-live="polite">Choose or paste your Cardmarket orders, then consolidate them.</p>
+      </section>
+      <section id="cardmarket-results" class="panel results-panel" aria-labelledby="cardmarket-results-heading" hidden>
+        <div class="results-heading"><div><p class="eyebrow">READY TO IMPORT</p><h2 id="cardmarket-results-heading">Your consolidated deck list</h2></div><div class="inventory-output-actions"><button id="cardmarket-copy" class="secondary" type="button" disabled>Copy list</button><button id="cardmarket-download" class="secondary" type="button" disabled>Download .txt ↓</button><button id="cardmarket-inventory" class="secondary" type="button" disabled>Check against collection →</button></div></div>
+        <div id="cardmarket-stats" class="stats"></div>
+        <label class="inventory-file-label" for="cardmarket-output">Combined quantities, alphabetized</label>
+        <textarea id="cardmarket-output" readonly spellcheck="false" aria-describedby="cardmarket-output-help"></textarea>
+        <p id="cardmarket-output-help" class="help">Standard deck-list syntax, ready to copy into another tool. Cardmarket printing labels such as “(V.2)” are removed.</p>
+      </section>
+    </main>
+
+    <main id="wants-list-panel" role="tabpanel" aria-labelledby="wants-list-tab" hidden>
+      <section class="intro">
+        <p class="eyebrow">TURN MANY WANTS LISTS INTO ONE</p>
+        <h1>Every want.<br><span>One clear list.</span></h1>
+        <p class="lede">Choose a text file containing several copied wants lists.<br class="desktop-break"> Repeated cards are added together in your browser.</p>
+      </section>
+      <section class="panel input-panel" aria-labelledby="wants-list-input-heading">
+        <div class="section-heading"><span class="step">01</span><h2 id="wants-list-input-heading">Your wants lists</h2></div>
+        <label for="wants-list-file" class="inventory-file-label">Choose the wants-list text file</label>
+        <input id="wants-list-file" class="inventory-file" type="file" accept=".txt,text/plain">
+        <p id="wants-list-file-hint" class="help">A UTF-8 text file · Multiple stacked lists are supported · Your file stays on this device</p>
+        <div class="textarea-heading"><label for="wants-list-text">Or paste your wants lists</label></div>
+        <textarea id="wants-list-text" spellcheck="false" placeholder="Paste one or more wants lists here. Each card line needs a quantity, for example: 4x Psychic Frog." aria-describedby="wants-list-input-help"></textarea>
+        <p id="wants-list-input-help" class="help">Only quantity-and-card-name rows are used. List headings, prices, notes, and blank lines are ignored.</p>
+        <div class="actions"><button id="wants-list-consolidate" class="primary" type="button">Consolidate wants <span aria-hidden="true">→</span></button></div>
+        <p id="wants-list-status" class="status" role="status" aria-live="polite">Choose or paste your wants lists, then consolidate them.</p>
+      </section>
+      <section id="wants-list-results" class="panel results-panel" aria-labelledby="wants-list-results-heading" hidden>
+        <div class="results-heading"><div><p class="eyebrow">READY TO SHARE OR IMPORT</p><h2 id="wants-list-results-heading">Your consolidated wants list</h2></div><div class="inventory-output-actions"><button id="wants-list-copy" class="secondary" type="button" disabled>Copy list</button><button id="wants-list-download" class="secondary" type="button" disabled>Download .txt ↓</button><button id="wants-list-inventory" class="secondary" type="button" disabled>Check against collection →</button></div></div>
+        <div id="wants-list-stats" class="stats"></div>
+        <label class="inventory-file-label" for="wants-list-output">Combined quantities, alphabetized</label>
+        <textarea id="wants-list-output" readonly spellcheck="false" aria-describedby="wants-list-output-help"></textarea>
+        <p id="wants-list-output-help" class="help">Standard deck-list syntax, ready to share or import into another tool.</p>
+      </section>
     </main>
     <footer><span>A little clarity before your next build.</span><span>DECK ANALYSER <span aria-hidden="true">/</span> LOCAL TOOLS</span></footer>
   </div>
