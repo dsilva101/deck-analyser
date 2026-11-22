@@ -15,6 +15,7 @@
   <script defer src="diff-ui.js?v=deck-diff-2"></script>
   <script defer src="cardmarket-ui.js"></script>
   <script defer src="wants-list-ui.js"></script>
+  <script defer src="replay-extractor-ui.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -29,6 +30,7 @@
       <button id="diff-tab" role="tab" aria-selected="false" aria-controls="diff-panel" tabindex="-1">Deck diff</button>
       <button id="cardmarket-tab" role="tab" aria-selected="false" aria-controls="cardmarket-panel" tabindex="-1">agg cardmarket orders</button>
       <button id="wants-list-tab" role="tab" aria-selected="false" aria-controls="wants-list-panel" tabindex="-1">agg wants lists</button>
+      <button id="replay-extractor-tab" role="tab" aria-selected="false" aria-controls="replay-extractor-panel" tabindex="-1">Replay extractor</button>
     </nav>
     <p class="help">Last picked files are remembered in this browser. Re-select a file to load any changes made on disk.</p>
 
@@ -225,6 +227,27 @@
         <label class="inventory-file-label" for="wants-list-output">Combined quantities, alphabetized</label>
         <textarea id="wants-list-output" readonly spellcheck="false" aria-describedby="wants-list-output-help"></textarea>
         <p id="wants-list-output-help" class="help">Standard deck-list syntax, ready to share or import into another tool.</p>
+      </section>
+    </main>
+
+    <main id="replay-extractor-panel" role="tabpanel" aria-labelledby="replay-extractor-tab" hidden>
+      <section class="intro">
+        <p class="eyebrow">ENDSTEP REPLAY TO JSONL</p>
+        <h1>Open the replay.<br><span>Keep the raw events.</span></h1>
+        <p class="lede">Convert an Endstep <code>.esreplay</code> export into JSON Lines for analysis.<br class="desktop-break"> Decompression and validation happen entirely in your browser.</p>
+      </section>
+      <section class="panel input-panel replay-extractor-input" aria-labelledby="replay-extractor-heading">
+        <div class="section-heading"><span class="step">01</span><h2 id="replay-extractor-heading">Your Endstep replay</h2><span class="small-label">.esreplay</span></div>
+        <label for="replay-extractor-file" class="inventory-file-label">Choose an Endstep replay export</label>
+        <input id="replay-extractor-file" class="inventory-file" type="file" accept=".esreplay,application/gzip,application/x-gzip">
+        <p id="replay-extractor-file-hint" class="help">Compressed replay files only · Your replay stays on this device</p>
+        <div class="actions"><button id="replay-extractor-download" class="primary" type="button">Extract JSONL <span aria-hidden="true">↓</span></button></div>
+        <p id="replay-extractor-status" class="status" role="status" aria-live="polite">Choose an <code>.esreplay</code> file to extract it.</p>
+      </section>
+      <section id="replay-extractor-results" class="panel results-panel" aria-labelledby="replay-extractor-results-heading" hidden>
+        <div class="results-heading"><div><p class="eyebrow">READY TO ANALYZE</p><h2 id="replay-extractor-results-heading">Your extracted replay</h2></div></div>
+        <div id="replay-extractor-stats" class="stats"></div>
+        <p class="help">The download is JSONL: one complete JSON record per line. The original <code>.esreplay</code> is not changed.</p>
       </section>
     </main>
     <footer><span>A little clarity before your next build.</span><span>DECK ANALYSER <span aria-hidden="true">/</span> LOCAL TOOLS</span></footer>
