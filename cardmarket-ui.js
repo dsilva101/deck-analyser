@@ -4,14 +4,11 @@
   const $ = (id) => document.getElementById(id);
   const store = window.DeckFiles;
   const MAX_BYTES = 20 * 1024 * 1024;
-  // Cardmarket purchase-confirmation email item rows include printing, rarity,
-  // language, condition, and price, or truncate long item descriptions with
-  // "..." before the price. Matching these shapes avoids treating email
-  // headers, totals, shipment IDs, or arbitrary text files as cards.
-  const FULL_ROW = /^\s*(\d+)x\s+(.+?)\s+\(([^()]+(?:\([^()]*\)[^()]*)*)\)\s+-\s+[A-Z]\s+-\s+.+?\s+-\s+(?:NM|EX|GD|LP|PL|PO|MT)(?:\s+-\s+.+?)?\s+\d[\d.,]*\s+EUR\s*$/iu;
-  const TRUNCATED_ROW = /^\s*(\d+)x\s+(.+?)(?:\.{3}|…)\s+\d[\d.,]*\s+EUR\s*$/iu;
-  const TRUNCATED_AFTER_SET = /^(.+?)\s+\([^()]+(?:\([^()]*\)[^()]*)*\)\s*(?:-\s*.*)?$/u;
-  const VERSION_SUFFIX = /\s+\(V\.\d+\)$/i;
+  // Cardmarket purchase-confirmation emails wrap each shipment's item rows
+  // between pairs of "+++++..." divider lines.
+  const DIVIDER = /^\s*\+{10,}\s*$/;
+  const ITEM_ROW = /^\s*(\d+)x\s+(.+)$/i;
+  const PRICE_SUFFIX = /\s+(?:\.{3}|…)?\s*\d[\d.,]*\s+EUR\s*$/i;
   let currentFile = null;
   let sourceText = "";
   let inputChanged = false;
@@ -27,58 +24,38 @@
     for (const id of ["cardmarket-copy", "cardmarket-download", "cardmarket-inventory"]) $(id).disabled = true;
   }
 
-  function stripTruncatedSet(body) {
-    const afterSet = TRUNCATED_AFTER_SET.exec(body);
-    if (afterSet) return afterSet[1];
-    let depth = 0;
-    let setStart = -1;
-    for (let i = 0; i < body.length; i++) {
-      if (body[i] === "(") {
-        if (depth === 0) setStart = i;
-        depth++;
-      } else if (body[i] === ")" && depth > 0) {
-        depth--;
-        if (depth === 0) setStart = -1;
-      }
-    }
-    if (depth > 0 && setStart > 0 && /\s/.test(body[setStart - 1])) {
-      return body.slice(0, setStart).trim();
-    }
-    return null;
-  }
-
-  function parseOrderRow(line) {
-    const full = FULL_ROW.exec(line);
-    if (full) {
-      return { quantity: Number(full[1]), name: full[2].trim().replace(VERSION_SUFFIX, "").trim() };
-    }
-    const truncated = TRUNCATED_ROW.exec(line);
-    if (!truncated) return null;
-    const rawName = stripTruncatedSet(truncated[2]);
-    if (!rawName) return null;
-    return { quantity: Number(truncated[1]), name: rawName.trim().replace(VERSION_SUFFIX, "").trim() };
+  function extractCardName(rest) {
+    const paren = rest.indexOf(" (");
+    const base = paren >= 0 ? rest.slice(0, paren) : rest.replace(PRICE_SUFFIX, "");
+    return base.trim();
   }
 
   function parseOrders(text) {
     const orders = [];
     let current = null;
     for (const line of text.split(/\r?\n/)) {
-      if (/^Contents:\s*$/i.test(line)) {
-        current = new Map(); orders.push(current); continue;
+      if (DIVIDER.test(line)) {
+        if (current) {
+          if (current.size) orders.push(current);
+          current = null;
+        } else {
+          current = new Map();
+        }
+        continue;
       }
       if (!current) continue;
-      if (/^Total\s+\d/i.test(line) || /^-{10,}\s*$/.test(line)) {
-        current = null; continue;
-      }
-      const row = parseOrderRow(line);
-      if (!row || !row.name || !row.quantity) continue;
-      current.set(row.name, (current.get(row.name) || 0) + row.quantity);
+      const match = ITEM_ROW.exec(line);
+      if (!match) continue;
+      const quantity = Number(match[1]);
+      const name = extractCardName(match[2]);
+      if (!name || !quantity) continue;
+      current.set(name, (current.get(name) || 0) + quantity);
     }
-    return orders.filter((order) => order.size);
+    return orders;
   }
 
   function isPurchaseConfirmation(text) {
-    return /Shipment details:/i.test(text) && parseOrders(text).length > 0;
+    return parseOrders(text).length > 0;
   }
 
   function consolidatedList(text) {

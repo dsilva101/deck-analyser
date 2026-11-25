@@ -26,11 +26,15 @@ Total 35,93 EUR
 
 Shipment 123457
 Contents:
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 2x Psychic Frog (Modern Horizons 3) - R - French - GD 4,94 EUR
 1x Damping Sphere (Dominaria) - U - French - NM 0,75 EUR
 1x Lórien Revealed (The Lord of the Rings: Tales of Middle-earth) -... 3,93 EUR
 2x Tithing Blade // Consuming Sepulcher (The Lost Caverns of Ixalan... 0,75 EUR
 1x Seasoned Cryomancer (V.1) (Mystery Booster 2: Reprints from Acro... 8,98 EUR
+Shipping 4,10 EUR
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Total 29,21 EUR
 """
 EXPECTED = "\n".join([
     "2 Abhorrent Oculus",
