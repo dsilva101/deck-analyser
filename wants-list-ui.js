@@ -10,7 +10,8 @@
   // "(MH3) 199", or "[Modern Horizons 3]".  Consolidation is by card, not
   // printing, so omit that metadata from both the output and the grouping key.
   const PRINTING_SUFFIX = /\s+(?:\([^()]+\)(?:\s+[\w★-]+)?(?:\s+\*[a-z]+\*)?|\[[^\]]+\])\s*$/iu;
-  let currentFile = null;
+  let currentFiles = [];
+  let inputChanged = false;
 
   function status(text, error = false) {
     $("wants-list-status").textContent = text;
@@ -31,51 +32,71 @@
     return cleaned;
   }
 
-  function consolidate(text) {
+  function pastedLists(text) {
+    // A selected file is always one list. For pasted input, a blank line marks
+    // the next list so repeated lines inside a list can still be added first.
+    return text.split(/(?:\r?\n){2,}/).filter((list) => list.trim());
+  }
+
+  function consolidate(lists) {
     const cards = new Map();
     let entries = 0;
-    for (const line of text.split(/\r?\n/)) {
-      const match = ROW.exec(line);
-      if (!match) continue;
-      const name = cleanCardName(match[2]);
-      // Price rows and bare totals are not card rows because they lack a name.
-      if (!name || /^[€$£©]|^(cards?|articles?|wants?\s*lists?|copyright)\b/i.test(name)) continue;
-      const key = name.toLocaleLowerCase();
-      const card = cards.get(key) || { name, quantity: 0 };
-      card.quantity += Number(match[1]);
-      cards.set(key, card);
-      entries++;
+    for (const list of lists) {
+      const listCards = new Map();
+      for (const line of list.split(/\r?\n/)) {
+        const match = ROW.exec(line);
+        if (!match) continue;
+        const name = cleanCardName(match[2]);
+        // Price rows and bare totals are not card rows because they lack a name.
+        if (!name || /^[€$£©]|^(cards?|articles?|wants?\s*lists?|copyright)\b/i.test(name)) continue;
+        const key = name.toLocaleLowerCase();
+        const card = listCards.get(key) || { name, quantity: 0 };
+        const quantity = Number(match[1]);
+        if (!Number.isSafeInteger(quantity) || quantity + card.quantity > Number.MAX_SAFE_INTEGER) throw new Error("Wanted quantities are too large.");
+        card.quantity += quantity;
+        listCards.set(key, card);
+        entries++;
+      }
+      for (const [key, card] of listCards) {
+        const existing = cards.get(key);
+        if (!existing || card.quantity > existing.quantity) cards.set(key, card);
+      }
     }
     const rows = [...cards.values()].sort((a, b) => a.name.localeCompare(b.name));
     return { entries, rows, text: rows.map((card) => `${card.quantity} ${card.name}`).join("\n") };
   }
 
   async function remember() {
-    if (!currentFile) return;
-    try { await store.save("wants-lists", currentFile, $("wants-list-text").value); }
+    if (!currentFiles.length) return;
+    try { await store.saveMany("wants-lists", currentFiles); }
     catch { status("Wants lists loaded, but browser storage could not remember them.", true); }
   }
 
   $("wants-list-file").addEventListener("change", async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = [...event.target.files];
+    if (!files.length) return;
+    inputChanged = true;
     invalidate();
-    if (file.size > MAX_BYTES) { status("Please choose a wants-list file smaller than 20 MB.", true); return; }
     try {
-      const text = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer());
-      if (text.includes("\0")) throw new Error("Choose a UTF-8 text file, not a binary file.");
-      currentFile = file;
-      $("wants-list-text").value = text;
-      $("wants-list-file-hint").textContent = `${file.name} loaded · Re-select it to load changes from disk`;
+      const loaded = await Promise.all(files.map(async (file) => {
+        if (file.size > MAX_BYTES) throw new Error(`${file.name}: choose a wants-list file smaller than 20 MB.`);
+        const text = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer());
+        if (text.includes("\0")) throw new Error(`${file.name}: choose a UTF-8 text file, not a binary file.`);
+        return { name: file.name, type: file.type || "text/plain", lastModified: file.lastModified, text };
+      }));
+      currentFiles = loaded;
+      $("wants-list-text").value = loaded.map((file) => file.text).join("\n\n");
+      $("wants-list-file-hint").textContent = `${loaded.length} file(s) loaded · Re-select files to load changes from disk`;
       status("Wants lists loaded. Consolidate them when you are ready.");
       await remember();
     } catch (error) { status(error.message || "Could not read that file as UTF-8 text.", true); }
   });
 
   $("wants-list-text").addEventListener("input", () => {
+    inputChanged = true;
     invalidate();
     if ($("wants-list-text").value.trim()) status("Wants lists updated. Consolidate them to refresh the list.");
-    if (currentFile) void remember();
+    currentFiles = [];
   });
 
   $("wants-list-consolidate").addEventListener("click", () => {
@@ -83,7 +104,8 @@
     try {
       const input = $("wants-list-text").value;
       if (new TextEncoder().encode(input).length > MAX_BYTES) throw new Error("Please use wants lists smaller than 20 MB.");
-      const result = consolidate(input);
+      const lists = currentFiles.length ? currentFiles.map((file) => file.text) : pastedLists(input);
+      const result = consolidate(lists);
       if (!result.rows.length) throw new Error("No card rows found. Use lines such as ‘4x Psychic Frog’ or ‘4 Psychic Frog’.");
       $("wants-list-output").value = result.text;
       $("wants-list-stats").replaceChildren();
@@ -96,7 +118,7 @@
       }
       $("wants-list-results").hidden = false;
       for (const id of ["wants-list-copy", "wants-list-download", "wants-list-inventory"]) $(id).disabled = false;
-      status(`Consolidated ${result.entries} card rows into ${result.rows.length} card names (${copies} total copies).`);
+      status(`Kept the maximum from ${lists.length} list(s): ${result.entries} card rows into ${result.rows.length} card names (${copies} total copies).`);
       void remember();
     } catch (error) { status(error.message, true); }
   });
@@ -119,11 +141,15 @@
     $("inventory-tab").click(); $("inventory-compare").focus();
   });
 
-  store.load("wants-lists").then((saved) => {
-    if (!saved) return;
-    currentFile = saved;
-    $("wants-list-text").value = saved.text;
-    $("wants-list-file-hint").textContent = `${saved.name} restored from this browser · Re-select it to load changes from disk`;
+  Promise.all([store.loadMany("wants-lists"), store.load("wants-lists")]).then(([saved, legacy]) => {
+    // Versions before multi-file support stored one snapshot under this key.
+    if (!saved.length && legacy) saved = [legacy];
+    // Never let the asynchronous restore replace files or text just chosen by
+    // the user while it was still loading.
+    if (!saved.length || inputChanged) return;
+    currentFiles = saved;
+    $("wants-list-text").value = saved.map((file) => file.text).join("\n\n");
+    $("wants-list-file-hint").textContent = `${saved.length} file(s) restored from this browser · Re-select files to load changes from disk`;
     try { store.restorePicker($("wants-list-file"), saved); } catch { /* The restored text remains usable. */ }
     status("Restored your saved wants lists. Consolidate them when you are ready.");
   });

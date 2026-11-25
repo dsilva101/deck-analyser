@@ -61,6 +61,15 @@ rules. The tool works completely offline and remembers its inputs across visits.
 Add files anytime; re-selecting a filename replaces its saved copy. Inputs can
 also be edited or removed. Limits: 100 decks and 20 MB per list.
 
+## Aggregate wants lists
+
+Select multiple wants-list text files, with one list per file, and consolidate
+them into the **maximum quantity of each card in any one list**. For example,
+`4 Psychic Frog` in one list and `1 Psychic Frog` in another results in
+`4 Psychic Frog`, not 5. Repeated rows in a single list are added before that
+maximum is calculated. You can also paste lists, separated from each other by a
+blank line. This tab works locally and remembers selected files in the browser.
+
 ## Deck diff
 
 Paste a left and right deck list to produce two lists: copies remaining only on
@@ -118,6 +127,7 @@ python3 tests/inventory_browser_check.py
 python3 tests/remembered_files_browser_check.py
 python3 tests/merger_browser_check.py
 python3 tests/diff_browser_check.py
+python3 tests/wants_list_browser_check.py
 ```
 
 It opens `index.html` via `file://`, loads the real Python runtime, and uses

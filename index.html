@@ -13,7 +13,7 @@
   <script defer src="inventory-ui.js"></script>
   <script defer src="merger-ui.js"></script>
   <script defer src="diff-ui.js?v=deck-diff-2"></script>
-  <script defer src="cardmarket-ui.js"></script>
+  <script defer src="cardmarket-ui.js?v=2"></script>
   <script defer src="wants-list-ui.js"></script>
   <script defer src="replay-extractor-ui.js"></script>
 </head>
@@ -180,20 +180,17 @@
 
     <main id="cardmarket-panel" role="tabpanel" aria-labelledby="cardmarket-tab" hidden>
       <section class="intro">
-        <p class="eyebrow">FROM ORDER PAGES TO A CLEAN LIST</p>
+        <p class="eyebrow">FROM PURCHASE EMAILS TO A CLEAN LIST</p>
         <h1>Many orders.<br><span>One deck list.</span></h1>
-        <p class="lede">Choose a text file containing one or more copied Cardmarket orders.<br class="desktop-break"> The card rows are consolidated in your browser.</p>
+        <p class="lede">Choose a saved Cardmarket purchase-confirmation email.<br class="desktop-break"> The card rows are consolidated in your browser.</p>
       </section>
       <section class="panel input-panel" aria-labelledby="cardmarket-input-heading">
-        <div class="section-heading"><span class="step">01</span><h2 id="cardmarket-input-heading">Copied Cardmarket orders</h2></div>
-        <label for="cardmarket-file" class="inventory-file-label">Choose the orders text file</label>
+        <div class="section-heading"><span class="step">01</span><h2 id="cardmarket-input-heading">Your Cardmarket purchase email</h2></div>
+        <label for="cardmarket-file" class="inventory-file-label">Choose the saved purchase email (.txt)</label>
         <input id="cardmarket-file" class="inventory-file" type="file" accept=".txt,text/plain">
-        <p id="cardmarket-file-hint" class="help">A UTF-8 text file · Multiple stacked orders are supported · Your file stays on this device</p>
-        <div class="textarea-heading"><label for="cardmarket-text">Or paste copied orders</label></div>
-        <textarea id="cardmarket-text" spellcheck="false" placeholder="Paste the complete Cardmarket order page(s) here. The tool reads only rows below “Magic the Gathering Singles”." aria-describedby="cardmarket-input-help"></textarea>
-        <p id="cardmarket-input-help" class="help">Navigation, prices, delivery details, and other copied page text are ignored.</p>
+        <p id="cardmarket-file-hint" class="help">Only UTF-8 Cardmarket purchase-confirmation email exports are supported · Your file stays on this device</p>
         <div class="actions"><button id="cardmarket-consolidate" class="primary" type="button">Consolidate cards <span aria-hidden="true">→</span></button></div>
-        <p id="cardmarket-status" class="status" role="status" aria-live="polite">Choose or paste your Cardmarket orders, then consolidate them.</p>
+        <p id="cardmarket-status" class="status" role="status" aria-live="polite">Choose a Cardmarket purchase-confirmation email to consolidate it.</p>
       </section>
       <section id="cardmarket-results" class="panel results-panel" aria-labelledby="cardmarket-results-heading" hidden>
         <div class="results-heading"><div><p class="eyebrow">READY TO IMPORT</p><h2 id="cardmarket-results-heading">Your consolidated deck list</h2></div><div class="inventory-output-actions"><button id="cardmarket-copy" class="secondary" type="button" disabled>Copy list</button><button id="cardmarket-download" class="secondary" type="button" disabled>Download .txt ↓</button><button id="cardmarket-inventory" class="secondary" type="button" disabled>Check against collection →</button></div></div>
@@ -208,23 +205,23 @@
       <section class="intro">
         <p class="eyebrow">TURN MANY WANTS LISTS INTO ONE</p>
         <h1>Every want.<br><span>One clear list.</span></h1>
-        <p class="lede">Choose a text file containing several copied wants lists.<br class="desktop-break"> Repeated cards are added together in your browser.</p>
+        <p class="lede">Choose one or more text files containing your wants lists.<br class="desktop-break"> The highest quantity from any one list is kept in your browser.</p>
       </section>
       <section class="panel input-panel" aria-labelledby="wants-list-input-heading">
         <div class="section-heading"><span class="step">01</span><h2 id="wants-list-input-heading">Your wants lists</h2></div>
-        <label for="wants-list-file" class="inventory-file-label">Choose the wants-list text file</label>
-        <input id="wants-list-file" class="inventory-file" type="file" accept=".txt,text/plain">
-        <p id="wants-list-file-hint" class="help">A UTF-8 text file · Multiple stacked lists are supported · Your file stays on this device</p>
+        <label for="wants-list-file" class="inventory-file-label">Choose wants-list text files — select multiple at once</label>
+        <input id="wants-list-file" class="inventory-file" type="file" multiple accept=".txt,text/plain">
+        <p id="wants-list-file-hint" class="help">UTF-8 text files · Each file is one list · Your files stay on this device</p>
         <div class="textarea-heading"><label for="wants-list-text">Or paste your wants lists</label></div>
-        <textarea id="wants-list-text" spellcheck="false" placeholder="Paste one or more wants lists here. Each card line needs a quantity, for example: 4x Psychic Frog." aria-describedby="wants-list-input-help"></textarea>
-        <p id="wants-list-input-help" class="help">Only quantity-and-card-name rows are used. List headings, prices, notes, and blank lines are ignored.</p>
+        <textarea id="wants-list-text" spellcheck="false" placeholder="Paste one or more wants lists here, separated by a blank line. Each card line needs a quantity, for example: 4x Psychic Frog." aria-describedby="wants-list-input-help"></textarea>
+        <p id="wants-list-input-help" class="help">Only quantity-and-card-name rows are used. Each selected file, or blank-line-separated pasted block, is a separate list. List headings, prices, and notes are ignored.</p>
         <div class="actions"><button id="wants-list-consolidate" class="primary" type="button">Consolidate wants <span aria-hidden="true">→</span></button></div>
         <p id="wants-list-status" class="status" role="status" aria-live="polite">Choose or paste your wants lists, then consolidate them.</p>
       </section>
       <section id="wants-list-results" class="panel results-panel" aria-labelledby="wants-list-results-heading" hidden>
         <div class="results-heading"><div><p class="eyebrow">READY TO SHARE OR IMPORT</p><h2 id="wants-list-results-heading">Your consolidated wants list</h2></div><div class="inventory-output-actions"><button id="wants-list-copy" class="secondary" type="button" disabled>Copy list</button><button id="wants-list-download" class="secondary" type="button" disabled>Download .txt ↓</button><button id="wants-list-inventory" class="secondary" type="button" disabled>Check against collection →</button></div></div>
         <div id="wants-list-stats" class="stats"></div>
-        <label class="inventory-file-label" for="wants-list-output">Combined quantities, alphabetized</label>
+        <label class="inventory-file-label" for="wants-list-output">Maximum quantities per list, alphabetized</label>
         <textarea id="wants-list-output" readonly spellcheck="false" aria-describedby="wants-list-output-help"></textarea>
         <p id="wants-list-output-help" class="help">Standard deck-list syntax, ready to share or import into another tool.</p>
       </section>

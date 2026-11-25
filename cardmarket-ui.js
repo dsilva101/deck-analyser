@@ -4,10 +4,17 @@
   const $ = (id) => document.getElementById(id);
   const store = window.DeckFiles;
   const MAX_BYTES = 20 * 1024 * 1024;
-  const MARKER = "magic the gathering singles";
-  const ROW = /^\s*(\d+)\s*x\s+(.+?)\s*$/i;
+  // Cardmarket purchase-confirmation email item rows include printing, rarity,
+  // language, condition, and price, or truncate long item descriptions with
+  // "..." before the price. Matching these shapes avoids treating email
+  // headers, totals, shipment IDs, or arbitrary text files as cards.
+  const FULL_ROW = /^\s*(\d+)x\s+(.+?)\s+\(([^()]+(?:\([^()]*\)[^()]*)*)\)\s+-\s+[A-Z]\s+-\s+.+?\s+-\s+(?:NM|EX|GD|LP|PL|PO|MT)(?:\s+-\s+.+?)?\s+\d[\d.,]*\s+EUR\s*$/iu;
+  const TRUNCATED_ROW = /^\s*(\d+)x\s+(.+?)(?:\.{3}|…)\s+\d[\d.,]*\s+EUR\s*$/iu;
+  const TRUNCATED_AFTER_SET = /^(.+?)\s+\([^()]+(?:\([^()]*\)[^()]*)*\)\s*(?:-\s*.*)?$/u;
   const VERSION_SUFFIX = /\s+\(V\.\d+\)$/i;
   let currentFile = null;
+  let sourceText = "";
+  let inputChanged = false;
 
   function status(text, error = false) {
     $("cardmarket-status").textContent = text;
@@ -20,20 +27,58 @@
     for (const id of ["cardmarket-copy", "cardmarket-download", "cardmarket-inventory"]) $(id).disabled = true;
   }
 
+  function stripTruncatedSet(body) {
+    const afterSet = TRUNCATED_AFTER_SET.exec(body);
+    if (afterSet) return afterSet[1];
+    let depth = 0;
+    let setStart = -1;
+    for (let i = 0; i < body.length; i++) {
+      if (body[i] === "(") {
+        if (depth === 0) setStart = i;
+        depth++;
+      } else if (body[i] === ")" && depth > 0) {
+        depth--;
+        if (depth === 0) setStart = -1;
+      }
+    }
+    if (depth > 0 && setStart > 0 && /\s/.test(body[setStart - 1])) {
+      return body.slice(0, setStart).trim();
+    }
+    return null;
+  }
+
+  function parseOrderRow(line) {
+    const full = FULL_ROW.exec(line);
+    if (full) {
+      return { quantity: Number(full[1]), name: full[2].trim().replace(VERSION_SUFFIX, "").trim() };
+    }
+    const truncated = TRUNCATED_ROW.exec(line);
+    if (!truncated) return null;
+    const rawName = stripTruncatedSet(truncated[2]);
+    if (!rawName) return null;
+    return { quantity: Number(truncated[1]), name: rawName.trim().replace(VERSION_SUFFIX, "").trim() };
+  }
+
   function parseOrders(text) {
     const orders = [];
     let current = null;
     for (const line of text.split(/\r?\n/)) {
-      if (line.toLocaleLowerCase().includes(MARKER)) {
+      if (/^Contents:\s*$/i.test(line)) {
         current = new Map(); orders.push(current); continue;
       }
       if (!current) continue;
-      const match = ROW.exec(line);
-      if (!match) continue;
-      const name = match[2].replace(VERSION_SUFFIX, "").trim();
-      current.set(name, (current.get(name) || 0) + Number(match[1]));
+      if (/^Total\s+\d/i.test(line) || /^-{10,}\s*$/.test(line)) {
+        current = null; continue;
+      }
+      const row = parseOrderRow(line);
+      if (!row || !row.name || !row.quantity) continue;
+      current.set(row.name, (current.get(row.name) || 0) + row.quantity);
     }
     return orders.filter((order) => order.size);
+  }
+
+  function isPurchaseConfirmation(text) {
+    return /Shipment details:/i.test(text) && parseOrders(text).length > 0;
   }
 
   function consolidatedList(text) {
@@ -51,8 +96,8 @@
 
   async function remember() {
     if (!currentFile) return;
-    try { await store.save("cardmarket-orders", currentFile, $("cardmarket-text").value); }
-    catch { status("Orders loaded, but browser storage could not remember them.", true); }
+    try { await store.save("cardmarket-orders", currentFile, sourceText); }
+    catch { status("Purchase email loaded, but browser storage could not remember it.", true); }
   }
 
   function restorePicker(file) {
@@ -62,32 +107,32 @@
   $("cardmarket-file").addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    inputChanged = true;
     invalidate();
+    currentFile = null;
+    sourceText = "";
     if (file.size > MAX_BYTES) { status("Please choose an orders file smaller than 20 MB.", true); return; }
     try {
       const text = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer());
       if (text.includes("\0")) throw new Error("Choose a UTF-8 text file, not a binary file.");
+      if (!isPurchaseConfirmation(text)) throw new Error("Choose a Cardmarket purchase-confirmation email export containing shipment item rows.");
       currentFile = file;
-      $("cardmarket-text").value = text;
+      sourceText = text;
       $("cardmarket-file-hint").textContent = `${file.name} loaded · Re-select it to load changes from disk`;
-      status("Orders loaded. Consolidate them when you are ready.");
+      status("Purchase email loaded. Consolidate it when you are ready.");
       await remember();
     } catch (error) { status(error.message || "Could not read that file as UTF-8 text.", true); }
-  });
-
-  $("cardmarket-text").addEventListener("input", () => {
-    invalidate();
-    if ($("cardmarket-text").value.trim()) status("Orders updated. Consolidate them to refresh the deck list.");
-    if (currentFile) void remember();
   });
 
   $("cardmarket-consolidate").addEventListener("click", () => {
     invalidate();
     try {
-      const input = $("cardmarket-text").value;
-      if (new TextEncoder().encode(input).length > MAX_BYTES) throw new Error("Please use an orders list smaller than 20 MB.");
+      const input = sourceText;
+      if (!input) throw new Error("Choose a Cardmarket purchase-confirmation email export first.");
+      if (new TextEncoder().encode(input).length > MAX_BYTES) throw new Error("Please use a purchase email smaller than 20 MB.");
+      if (!isPurchaseConfirmation(input)) throw new Error("Choose a Cardmarket purchase-confirmation email export containing shipment item rows.");
       const result = consolidatedList(input);
-      if (!result.rows.length) throw new Error("No Cardmarket card rows found. Include the “Magic the Gathering Singles” heading and its quantity rows.");
+      if (!result.rows.length) throw new Error("No Cardmarket shipment item rows found in that file.");
       $("cardmarket-output").value = result.text;
       $("cardmarket-stats").replaceChildren();
       const copies = result.rows.reduce((total, card) => total + card.quantity, 0);
@@ -123,11 +168,11 @@
   });
 
   store.load("cardmarket-orders").then((saved) => {
-    if (!saved) return;
+    if (!saved || inputChanged) return;
     currentFile = saved;
-    $("cardmarket-text").value = saved.text;
+    sourceText = saved.text;
     $("cardmarket-file-hint").textContent = `${saved.name} restored from this browser · Re-select it to load changes from disk`;
     restorePicker(saved);
-    status("Restored your saved Cardmarket orders. Consolidate them when you are ready.");
+    status("Restored your saved purchase email. Consolidate it when you are ready.");
   });
 })();
